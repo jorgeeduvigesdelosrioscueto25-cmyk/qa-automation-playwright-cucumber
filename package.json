@@ -1,0 +1,46 @@
+{
+  "name": "qa-automation-playwright-cucumber",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Automatizacion BDD de Sauce Demo con Excel, Playwright y Cucumber",
+  "engines": {
+    "node": "^22.13.0 || 24 || >=26"
+  },
+  "scripts": {
+    "test": "node --require ts-node/register scripts/runAutomation.ts",
+    "test:smoke": "node --require ts-node/register scripts/runAutomation.ts --tags @smoke",
+    "test:regression": "node --require ts-node/register scripts/runAutomation.ts --tags @regression",
+    "test:happy": "node --require ts-node/register scripts/runAutomation.ts --tags @happyPath",
+    "test:unhappy": "node --require ts-node/register scripts/runAutomation.ts --tags @unhappyPath",
+    "test:headed": "node --require ts-node/register scripts/runAutomation.ts --headed",
+    "test:dry": "node --require ts-node/register scripts/runAutomation.ts --dry-run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write . --ignore-path .gitignore --ignore-unknown",
+    "format:check": "prettier --check . --ignore-path .gitignore --ignore-unknown",
+    "validate": "npm run typecheck && npm run lint && npm run format:check && npm run selfcheck",
+    "selfcheck": "node --require ts-node/register scripts/selfcheck.ts",
+    "data:create": "node --require ts-node/register scripts/createData.ts",
+    "browsers:install": "playwright install",
+    "reports:merge": "node --require ts-node/register scripts/mergeReports.ts",
+    "pipeline:prepare": "node --require ts-node/register scripts/preparePipeline.ts"
+  },
+  "dependencies": {
+    "@cucumber/cucumber": "13.2.1",
+    "@cucumber/gherkin": "42.0.1",
+    "@cucumber/messages": "34.2.1",
+    "@cucumber/tag-expressions": "11.0.1",
+    "@playwright/test": "1.63.0",
+    "docx": "9.8.1",
+    "exceljs": "4.4.0",
+    "playwright": "1.63.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "8.71.0"
+  }
+}

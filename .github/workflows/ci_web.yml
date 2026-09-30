@@ -1,0 +1,174 @@
+name: QA Web Sauce Demo
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: Navegador (properties usa el archivo)
+        type: choice
+        options: [properties, chromium, firefox, webkit, all]
+        default: properties
+      execution_mode:
+        description: Concurrencia entre navegadores
+        type: choice
+        options: [properties, parallel, sequential]
+        default: properties
+      headless:
+        description: Sin ventana (false utiliza pantalla virtual en CI)
+        type: choice
+        options: [properties, 'true', 'false']
+        default: properties
+      logs:
+        description: Mostrar logs detallados
+        type: choice
+        options: [properties, 'true', 'false']
+        default: properties
+      screenshots:
+        description: Capturas por paso
+        type: choice
+        options: [properties, 'true', 'false']
+        default: properties
+      trace:
+        description: Traza al fallar
+        type: choice
+        options: [properties, 'true', 'false']
+        default: properties
+      workers:
+        description: Workers por navegador (properties o entero desde 0)
+        type: string
+        default: properties
+      tags:
+        description: Expresion Cucumber, properties o none (sin filtro)
+        type: string
+        default: properties
+      tap:
+        description: TAP-001,TAP-007, properties o none (sin filtro)
+        type: string
+        default: properties
+      dry_run:
+        description: Validar Gherkin sin ejecutar navegadores
+        type: choice
+        options: [properties, 'true', 'false']
+        default: properties
+permissions:
+  contents: read
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    outputs:
+      browser: ${{ steps.parametros.outputs.browser }}
+      mode: ${{ steps.parametros.outputs.mode }}
+      matrix: ${{ steps.parametros.outputs.matrix }}
+      report: ${{ steps.parametros.outputs.report }}
+      environment: ${{ steps.parametros.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - id: parametros
+        env:
+          INPUT_BROWSER: ${{ inputs.browser }}
+          INPUT_MODE: ${{ inputs.execution_mode }}
+          INPUT_HEADLESS: ${{ inputs.headless }}
+          INPUT_LOGS: ${{ inputs.logs }}
+          INPUT_SCREENSHOTS: ${{ inputs.screenshots }}
+          INPUT_TRACE: ${{ inputs.trace }}
+          INPUT_WORKERS: ${{ inputs.workers }}
+          INPUT_TAGS: ${{ inputs.tags }}
+          INPUT_TAP: ${{ inputs.tap }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: npm run pipeline:prepare
+  paralelo:
+    needs: preparar
+    if: needs.preparar.outputs.browser != 'all' || needs.preparar.outputs.mode == 'parallel'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        browser: ${{ fromJSON(needs.preparar.outputs.matrix) }}
+    env: ${{ fromJSON(needs.preparar.outputs.environment) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Ejecutar escenarios
+        env:
+          TEST_BROWSER: ${{ matrix.browser }}
+        run: |
+          if [ "$HEADLESS" = "false" ]; then
+            xvfb-run -a npm test -- --browser "$TEST_BROWSER"
+          else
+            npm test -- --browser "$TEST_BROWSER"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-${{ matrix.browser }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/${{ needs.preparar.outputs.report }}/
+          if-no-files-found: warn
+          retention-days: 14
+  secuencial:
+    needs: preparar
+    if: needs.preparar.outputs.browser == 'all' && needs.preparar.outputs.mode == 'sequential'
+    runs-on: ubuntu-latest
+    env: ${{ fromJSON(needs.preparar.outputs.environment) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Ejecutar escenarios
+        run: |
+          if [ "$HEADLESS" = "false" ]; then
+            xvfb-run -a npm test
+          else
+            npm test
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-consolidado-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/${{ needs.preparar.outputs.report }}/
+          if-no-files-found: warn
+          retention-days: 14
+  consolidar:
+    needs: [preparar, paralelo]
+    if: always() && needs.preparar.result == 'success' && needs.paralelo.result != 'skipped'
+    runs-on: ubuntu-latest
+    env: ${{ fromJSON(needs.preparar.outputs.environment) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: web-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/${{ needs.preparar.outputs.report }}/
+          merge-multiple: true
+      - run: npm run reports:merge -- --dir "reports/$QA_REPORT_NAME" --expected "${{ needs.preparar.outputs.browser == 'all' && 'chromium,firefox,webkit' || needs.preparar.outputs.browser }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-consolidado-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/${{ needs.preparar.outputs.report }}/
+          if-no-files-found: warn
+          retention-days: 14

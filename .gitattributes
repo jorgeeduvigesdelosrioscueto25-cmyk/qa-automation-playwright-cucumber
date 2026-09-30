@@ -1,0 +1,8 @@
+* text=auto
+*.cmd text eol=crlf
+*.sh text eol=lf
+*.feature text eol=lf
+*.xlsx binary
+*.docx binary
+*.png binary
+*.zip binary

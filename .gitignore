@@ -1,0 +1,20 @@
+# Fuente unica de exclusiones: Git, Prettier y ESLint.
+node_modules/
+reports/
+samples/
+work/
+work-selfcheck-*/
+.env
+.env.*
+*.tmp
+*.log
+.DS_Store
+
+# Patrones trasladados desde .prettierignore.
+package-lock.json
+resources/data/*.xlsx
+docs/*.txt
+# Estos dos insumos SI se versionan: npm ci y los escenarios los necesitan.
+# Prettier omite extensiones no soportadas mediante --ignore-unknown.
+!package-lock.json
+!resources/data/*.xlsx

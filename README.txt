@@ -1,5 +1,5 @@
 QA AUTOMATION - PLAYWRIGHT + CUCUMBER - SAUCE DEMO
-Version 2.0
+Version 2.1
 
 Proyecto TypeScript de pruebas FrontEnd con Playwright, Cucumber, Page Object
 Model y datos Excel. Cucumber es el unico ejecutor de escenarios;
@@ -234,7 +234,7 @@ Un solo motor crea una sola ejecucion. Cada job valida codigo e instala su
 navegador con --with-deps. HEADLESS=false utiliza una pantalla virtual Xvfb;
 no abre una ventana en tu escritorio. Los logs aparecen en GitHub si estan
 habilitados y se guardan en los artefactos en ambos modos.
-La etapa final consolida los artefactos paralelos con identificador comun.
+La etapa final consolida los artefactos de ejecucion paralela o secuencial.
 Los artefactos se conservan 14 dias, incluso ante errores. Un artefacto ausente
 se informa como fallo de infraestructura. Dry run conserva dashboard/manifiestos
 sin convertir escenarios pendientes en fallos funcionales.
@@ -243,7 +243,37 @@ Para habilitarlo: sube el proyecto (incluidos properties, lockfile y Excel) a
 tu repositorio GitHub en main. Actions detecta .github/workflows/ci_web.yml.
 No subas node_modules/ ni reports/. No incluyas secretos en properties; usa
 el almacen de secretos del proveedor si cambias a una aplicacion que los use.
-El repositorio no fue publicado ni el workflow ejecutado en GitHub desde aqui.
+
+PUBLICACION DEL DASHBOARD Y TABLA FINAL
+
+En el repositorio: Settings > Pages > Build and deployment > Source: GitHub Actions.
+Esta configuracion se realiza una sola vez. No necesitas crear un token ni un
+secret de publicacion: el job publicar usa el token automatico de Actions con
+pages: write e id-token: write. El resto del workflow solo solicita contents: read.
+
+Al terminar, el job consolidar escribe una tabla en el Summary de la corrida:
+navegador, seleccionados, PASSED, FAILED, SKIPPED, pendientes, exito y tiempo.
+El job publicar repite la tabla y agrega el enlace real devuelto por GitHub Pages.
+Se generan tabla y reporte aunque fallen escenarios; la corrida conserva su
+estado de fallo. Si no hay resultados, el Summary informa que no existe reporte.
+
+Push a main o ejecucion manual desde main publica la ultima corrida en Pages.
+Los PR conservan tabla y artefactos sin reemplazar el sitio publicado.
+El enlace del sitio muestra la ultima corrida publicada, sin historial de sitios.
+
+El sitio contiene HTML, CSS, JavaScript, JSON resumido y PNG referenciadas.
+Los datos de credenciales se retiran del manifiesto web; se ocultan las
+credenciales conocidas del Excel en mensajes y se eliminan credenciales/query
+de las URLs mostradas. Logs, trazas, Word y manifiestos completos permanecen
+en los artefactos de Actions, y no se copian a Pages. Las capturas muestran los
+datos visibles de la aplicacion: este proyecto publica datos de Sauce Demo.
+
+Prueba local (usa una carpeta de destino nueva o vacia):
+  npm.cmd run reports:publish -- --dir reports/REPORT_... --output site
+  npm.cmd run reports:publish -- --dir reports/REPORT_... --summary-only
+El primer comando construye site/index.html; site/ se ignora por Git.
+El segundo solo imprime la tabla; en Actions escribe GITHUB_STEP_SUMMARY.
+La publicacion remota requiere una corrida con Pages habilitado.
 
 8. VALIDACION Y SOLUCION DE PROBLEMAS
 

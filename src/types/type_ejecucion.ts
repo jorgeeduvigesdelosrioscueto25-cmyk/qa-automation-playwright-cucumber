@@ -73,3 +73,8 @@ export interface Resumen {
     tasaExito: number | null;
   };
 }
+export type ResumenDashboard = Omit<Resumen, 'manifiesto'> & {
+  manifiesto: Omit<Manifiesto, 'casos'> & {
+    casos: Pick<CasoSeleccionado, 'id' | 'nombreGherkin' | 'tags'>[];
+  };
+};

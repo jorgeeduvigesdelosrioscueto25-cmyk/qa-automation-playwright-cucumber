@@ -1,6 +1,6 @@
 {
   "name": "qa-automation-playwright-cucumber",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Automatizacion BDD de Sauce Demo con Excel, Playwright y Cucumber",
   "engines": {
@@ -23,7 +23,8 @@
     "data:create": "node --require ts-node/register scripts/createData.ts",
     "browsers:install": "playwright install",
     "reports:merge": "node --require ts-node/register scripts/mergeReports.ts",
-    "pipeline:prepare": "node --require ts-node/register scripts/preparePipeline.ts"
+    "pipeline:prepare": "node --require ts-node/register scripts/preparePipeline.ts",
+    "reports:publish": "node --require ts-node/register scripts/publishReport.ts"
   },
   "dependencies": {
     "@cucumber/cucumber": "13.2.1",

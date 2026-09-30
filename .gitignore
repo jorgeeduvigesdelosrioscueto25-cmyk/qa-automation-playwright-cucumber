@@ -1,6 +1,7 @@
 # Fuente unica de exclusiones: Git, Prettier y ESLint.
 node_modules/
 reports/
+site/
 samples/
 work/
 work-selfcheck-*/

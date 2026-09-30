@@ -13,7 +13,7 @@ import {
   ImageRun,
   HeadingLevel,
 } from 'docx';
-import type { Manifiesto, ResultadoCaso, Resumen } from '../types/type_ejecucion';
+import type { Manifiesto, ResultadoCaso, Resumen, ResumenDashboard } from '../types/type_ejecucion';
 import { escribirJsonAtomico } from './util_evidencias';
 export const escaparHtml = (texto: string) =>
   texto.replace(
@@ -98,7 +98,7 @@ export async function consolidar(
     },
   };
 }
-export async function generarDashboard(carpeta: string, resumen: Resumen) {
+export async function generarDashboard(carpeta: string, resumen: ResumenDashboard) {
   const destino = path.join(carpeta, 'resumen');
   await fs.mkdir(path.join(destino, 'assets'), { recursive: true });
   for (const archivo of ['styles.css', 'dashboard.js'])

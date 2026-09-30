@@ -9,6 +9,74 @@ import { consolidar } from '../src/utilities/util_reportes';
 import type { Manifiesto } from '../src/types/type_ejecucion';
 import { crearDatos } from './createData';
 import { prepararPipeline } from './preparePipeline';
+import { resumenPublico, tablaActions, prepararSitio } from './publishReport';
+import type { Resumen } from '../src/types/type_ejecucion';
+async function comprobarPublicacion(temporal: string, base: Resumen): Promise<number> {
+  const resumen = structuredClone(base);
+  const password = 'secreto-sintetico-selfcheck';
+  resumen.manifiesto.casos[0].datos.usuario = 'usuario-privado-fixture';
+  resumen.manifiesto.casos[0].datos.contrasena = password;
+  resumen.manifiesto.baseUrl = 'https://usuario:clave@example.com/app?token=privado';
+  resumen.resultados[0].estado = 'PASSED';
+  resumen.resultados[1].estado = 'FAILED';
+  resumen.resultados[2].estado = 'SKIPPED';
+  resumen.resultados[1].error = `Fallo de usuario-privado-fixture con ${password}`;
+  resumen.resultados[1].trace = 'archivo-privado.zip';
+  resumen.resultados[1].documento = 'archivo-privado.docx';
+  resumen.metricas = {
+    seleccionados: 3,
+    passed: 1,
+    failed: 1,
+    skipped: 1,
+    pendientes: 0,
+    tasaExito: 50,
+  };
+  const publico = resumenPublico(resumen);
+  assert.equal(JSON.stringify(publico).includes(password), false);
+  assert.equal(JSON.stringify(publico).includes('usuario-privado-fixture'), false);
+  assert.equal(Object.hasOwn(publico.manifiesto.casos[0], 'datos'), false);
+  assert.equal(publico.manifiesto.baseUrl, 'https://example.com/app');
+  assert.equal(publico.resultados[1].trace, undefined);
+  assert.equal(publico.resultados[1].documento, undefined);
+  assert.deepEqual(publico.metricas, resumen.metricas);
+  const tabla = tablaActions(publico, 'https://example.com/qa/');
+  assert.match(
+    tabla,
+    /\| \*\*TOTAL\*\* \| \*\*3\*\* \| \*\*1\*\* \| \*\*1\*\* \| \*\*1\*\* \| \*\*0\*\* \| \*\*50\.0%\*\*/,
+  );
+  assert.match(tabla, /Abrir dashboard publicado/);
+  const dry = tablaActions({ ...publico, manifiesto: { ...publico.manifiesto, dryRun: true } });
+  assert.match(dry, /DRY RUN/);
+  assert.equal(tabla.includes(password), false);
+  const captura = `navegadores/chromium/escenarios/${resumen.resultados[0].tap}/evidencias/paso-01.png`;
+  await fs.mkdir(path.dirname(path.join(temporal, captura)), { recursive: true });
+  await fs.writeFile(
+    path.join(temporal, captura),
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5XcAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  );
+  resumen.resultados[0].pasos = [
+    { nombre: 'Paso de fixture', estado: 'PASSED', duracionMs: 1, captura },
+  ];
+  const destino = path.join(temporal, 'sitio-publico');
+  await prepararSitio(temporal, destino, resumen);
+  assert.equal(
+    (await fs.readFile(path.join(destino, 'reporte/resumen/dashboard.html'), 'utf8')).includes(
+      password,
+    ),
+    false,
+  );
+  assert.ok((await fs.stat(path.join(destino, 'reporte', captura))).isFile());
+  await assert.rejects(prepararSitio(temporal, destino, resumen), /nueva o vacia/);
+  resumen.resultados[0].pasos[0].captura = '../fuera.png';
+  await assert.rejects(
+    prepararSitio(temporal, path.join(temporal, 'sitio-invalido'), resumen),
+    /no permitida/,
+  );
+  return 15;
+}
 async function comprobarProperties(temporal: string): Promise<number> {
   const archivo = path.join(temporal, 'automation.properties');
   const contenido = [
@@ -220,8 +288,9 @@ async function comprobar() {
     assert.equal(conSkip.metricas.failed, 2);
     assert.equal(conSkip.metricas.tasaExito, 0);
     verificaciones += 3;
+    verificaciones += await comprobarPublicacion(temporal, conSkip);
     console.log(
-      `Selfcheck: ${verificaciones} comprobaciones de seleccion, datos, configuracion y consolidacion correctas.`,
+      `Selfcheck: ${verificaciones} comprobaciones de seleccion, datos, configuracion, consolidacion y publicacion correctas.`,
     );
   } finally {
     await fs.rm(temporal, { recursive: true, force: true });

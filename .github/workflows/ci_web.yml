@@ -148,10 +148,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
   consolidar:
-    needs: [preparar, paralelo]
-    if: always() && needs.preparar.result == 'success' && needs.paralelo.result != 'skipped'
+    needs: [preparar, paralelo, secuencial]
+    if: always()
     runs-on: ubuntu-latest
-    env: ${{ fromJSON(needs.preparar.outputs.environment) }}
+    env: ${{ fromJSON(needs.preparar.outputs.environment || '{}') }}
+    outputs:
+      site_ready: ${{ steps.web.outputs.ready }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -160,15 +162,74 @@ jobs:
           cache: npm
       - run: npm ci
       - uses: actions/download-artifact@v4
+        id: descargar
+        if: needs.preparar.outputs.report != ''
+        continue-on-error: true
         with:
           pattern: web-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/${{ needs.preparar.outputs.report }}/
           merge-multiple: true
-      - run: npm run reports:merge -- --dir "reports/$QA_REPORT_NAME" --expected "${{ needs.preparar.outputs.browser == 'all' && 'chromium,firefox,webkit' || needs.preparar.outputs.browser }}"
+      - name: Consolidar resultados
+        if: steps.descargar.outcome == 'success'
+        run: npm run reports:merge -- --dir "reports/$QA_REPORT_NAME" --expected "${{ needs.preparar.outputs.browser == 'all' && 'chromium,firefox,webkit' || needs.preparar.outputs.browser }}"
+      - name: Tabla final y dashboard publico
+        id: web
+        if: always()
+        env:
+          QA_JOB_STATUS: Preparar=${{ needs.preparar.result }}, paralelo=${{ needs.paralelo.result }}, secuencial=${{ needs.secuencial.result }}
+        run: npm run reports:publish -- --dir "reports/${QA_REPORT_NAME:-SIN_REPORTE}" --output site
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: web-consolidado-${{ github.run_id }}-${{ github.run_attempt }}
+          name: web-reporte-final-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/${{ needs.preparar.outputs.report }}/
           if-no-files-found: warn
           retention-days: 14
+      - name: Preparar artefacto para GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        if: always() && steps.web.outputs.ready == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          path: site
+  publicar:
+    needs: [preparar, consolidar]
+    if: always() && needs.consolidar.outputs.site_ready == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: actions/configure-pages@v5
+      - name: Publicar dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Recuperar resumen consolidado
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          name: web-reporte-final-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/${{ needs.preparar.outputs.report }}/
+      - name: Tabla final con enlace
+        if: always()
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          QA_REPORT_NAME: ${{ needs.preparar.outputs.report }}
+        run: |
+          if [ -n "$PAGE_URL" ]; then
+            npm run reports:publish -- --dir "reports/$QA_REPORT_NAME" --summary-only --page-url "$PAGE_URL"
+          else
+            npm run reports:publish -- --dir "reports/$QA_REPORT_NAME" --summary-only
+            echo 'La publicacion no se completo. Revisa Settings > Pages > Source: GitHub Actions y los logs del job publicar.' >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -1,26 +1,11 @@
 import fs from 'node:fs';
-import { cargarConfiguracion, type Flag } from '../config/config_environment';
+import { cargarConfiguracion } from '../config/config_environment';
 import { nombreReporte } from '../config/config_reportes';
 
 export function prepararPipeline(entorno: NodeJS.ProcessEnv = process.env) {
   const efectivo = { ...entorno };
-  const entradas: Record<string, Flag> = {
-    INPUT_BROWSER: 'BROWSER',
-    INPUT_MODE: 'EXECUTION_MODE',
-    INPUT_HEADLESS: 'HEADLESS',
-    INPUT_LOGS: 'EXECUTION_LOGS',
-    INPUT_SCREENSHOTS: 'SCREENSHOT_EACH_STEP',
-    INPUT_TRACE: 'TRACE_ON_FAILURE',
-    INPUT_WORKERS: 'CUCUMBER_PARALLEL',
-    INPUT_TAGS: 'TAGS',
-    INPUT_TAP: 'TAP',
-    INPUT_DRY_RUN: 'DRY_RUN',
-  };
-  for (const [entrada, flag] of Object.entries(entradas)) {
-    const valor = entorno[entrada]?.trim();
-    if (valor && valor !== 'properties')
-      efectivo[flag] = valor === 'none' && (flag === 'TAGS' || flag === 'TAP') ? '' : valor;
-  }
+  const navegador = entorno.INPUT_BROWSER?.trim();
+  if (navegador) efectivo.BROWSER = navegador;
   const config = cargarConfiguracion(efectivo);
   const ahora = new Date();
   const report = nombreReporte(ahora, config.zona);

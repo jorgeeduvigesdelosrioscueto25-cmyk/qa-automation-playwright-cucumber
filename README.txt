@@ -221,10 +221,14 @@ procesos terminados se registran como FAILED/INFRAESTRUCTURA.
 7. PIPELINE GITHUB ACTIONS
 
 Push/PR a main: utiliza los valores versionados de automation.properties.
-Run workflow muestra un unico selector Navegador: chromium, firefox o webkit.
-El navegador seleccionado sustituye BROWSER solo para esa corrida manual.
-El resto de ajustes utiliza automation.properties: HEADLESS, EXECUTION_LOGS,
-SCREENSHOT_EACH_STEP, TRACE_ON_FAILURE, CUCUMBER_PARALLEL, EXECUTION_MODE,
+Run workflow muestra exactamente tres controles:
+  Navegador: chromium, firefox o webkit.
+  Mostrar logs: marcado muestra el detalle; desmarcado muestra resumen/progreso.
+  Ejecucion de escenarios: sequential (uno por uno) o parallel (varios a la vez).
+Estos valores sustituyen BROWSER, EXECUTION_LOGS y EXECUTION_MODE solo para
+esa corrida manual. sequential utiliza 0 workers; parallel utiliza al menos 2.
+Si CUCUMBER_PARALLEL del archivo es mayor que 2, parallel conserva ese valor.
+El resto de ajustes utiliza automation.properties: HEADLESS, capturas, trazas,
 TAGS, TAP y DRY_RUN. Deja TAGS y TAP vacios para ejecutar todos los casos.
 Ejemplo: TAGS=@happyPath ejecuta solo los escenarios con ese tag.
 Para pruebas automaticas con los tres motores, utiliza BROWSER=all en el archivo.

@@ -12,6 +12,16 @@ on:
         options: [chromium, firefox, webkit]
         default: chromium
         required: true
+      logs:
+        description: Mostrar logs
+        type: boolean
+        default: false
+      execution_mode:
+        description: Ejecucion de escenarios
+        type: choice
+        options: [sequential, parallel]
+        default: sequential
+        required: true
 permissions:
   contents: read
 jobs:
@@ -33,8 +43,11 @@ jobs:
       - id: parametros
         env:
           INPUT_BROWSER: ${{ inputs.browser }}
+          INPUT_LOGS: ${{ inputs.logs }}
+          INPUT_MODE: ${{ inputs.execution_mode }}
         run: npm run pipeline:prepare
   paralelo:
+    name: Pruebas (${{ matrix.browser }}, ${{ needs.preparar.outputs.mode }})
     needs: preparar
     if: needs.preparar.outputs.browser != 'all' || needs.preparar.outputs.mode == 'parallel'
     runs-on: ubuntu-latest

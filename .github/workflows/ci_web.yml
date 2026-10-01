@@ -7,52 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       browser:
-        description: Navegador (properties usa el archivo)
+        description: Navegador
         type: choice
-        options: [properties, chromium, firefox, webkit, all]
-        default: properties
-      execution_mode:
-        description: Concurrencia entre navegadores
-        type: choice
-        options: [properties, parallel, sequential]
-        default: properties
-      headless:
-        description: Sin ventana (false utiliza pantalla virtual en CI)
-        type: choice
-        options: [properties, 'true', 'false']
-        default: properties
-      logs:
-        description: Mostrar logs detallados
-        type: choice
-        options: [properties, 'true', 'false']
-        default: properties
-      screenshots:
-        description: Capturas por paso
-        type: choice
-        options: [properties, 'true', 'false']
-        default: properties
-      trace:
-        description: Traza al fallar
-        type: choice
-        options: [properties, 'true', 'false']
-        default: properties
-      workers:
-        description: Workers por navegador (properties o entero desde 0)
-        type: string
-        default: properties
-      tags:
-        description: Expresion Cucumber, properties o none (sin filtro)
-        type: string
-        default: properties
-      tap:
-        description: TAP-001,TAP-007, properties o none (sin filtro)
-        type: string
-        default: properties
-      dry_run:
-        description: Validar Gherkin sin ejecutar navegadores
-        type: choice
-        options: [properties, 'true', 'false']
-        default: properties
+        options: [chromium, firefox, webkit]
+        default: chromium
+        required: true
 permissions:
   contents: read
 jobs:
@@ -74,15 +33,6 @@ jobs:
       - id: parametros
         env:
           INPUT_BROWSER: ${{ inputs.browser }}
-          INPUT_MODE: ${{ inputs.execution_mode }}
-          INPUT_HEADLESS: ${{ inputs.headless }}
-          INPUT_LOGS: ${{ inputs.logs }}
-          INPUT_SCREENSHOTS: ${{ inputs.screenshots }}
-          INPUT_TRACE: ${{ inputs.trace }}
-          INPUT_WORKERS: ${{ inputs.workers }}
-          INPUT_TAGS: ${{ inputs.tags }}
-          INPUT_TAP: ${{ inputs.tap }}
-          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: npm run pipeline:prepare
   paralelo:
     needs: preparar

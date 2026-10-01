@@ -172,11 +172,60 @@ async function comprobarProperties(temporal: string): Promise<number> {
     () => prepararPipeline({ QA_CONFIG_FILE: archivo, INPUT_BROWSER: 'inexistente' }),
     /BROWSER no valido/,
   );
+  const manualSecuencial = prepararPipeline({
+    QA_CONFIG_FILE: archivo,
+    INPUT_BROWSER: 'chromium',
+    INPUT_MODE: 'sequential',
+    INPUT_LOGS: 'false',
+  });
+  const flagsSecuencial = JSON.parse(manualSecuencial.environment);
+  assert.deepEqual(
+    [manualSecuencial.mode, flagsSecuencial.CUCUMBER_PARALLEL, flagsSecuencial.EXECUTION_LOGS],
+    ['sequential', '0', 'false'],
+  );
+  const manualParalelo = prepararPipeline({
+    QA_CONFIG_FILE: archivo,
+    INPUT_BROWSER: 'webkit',
+    INPUT_MODE: 'parallel',
+    INPUT_LOGS: 'true',
+    EXECUTION_LOGS: 'false',
+    CUCUMBER_PARALLEL: '0',
+  });
+  const flagsParalelo = JSON.parse(manualParalelo.environment);
+  assert.deepEqual(
+    [manualParalelo.mode, flagsParalelo.CUCUMBER_PARALLEL, flagsParalelo.EXECUTION_LOGS],
+    ['parallel', '2', 'true'],
+  );
+  assert.equal(
+    JSON.parse(
+      prepararPipeline({ QA_CONFIG_FILE: archivo, INPUT_MODE: 'parallel', CUCUMBER_PARALLEL: '4' })
+        .environment,
+    ).CUCUMBER_PARALLEL,
+    '4',
+  );
+  const automatico = prepararPipeline({
+    QA_CONFIG_FILE: archivo,
+    INPUT_MODE: '',
+    INPUT_LOGS: '',
+  });
+  const flagsAutomatico = JSON.parse(automatico.environment);
+  assert.deepEqual(
+    [automatico.mode, flagsAutomatico.CUCUMBER_PARALLEL, flagsAutomatico.EXECUTION_LOGS],
+    ['sequential', '2', 'true'],
+  );
+  assert.throws(
+    () => prepararPipeline({ QA_CONFIG_FILE: archivo, INPUT_MODE: 'inexistente' }),
+    /EXECUTION_MODE no valido/,
+  );
+  assert.throws(
+    () => prepararPipeline({ QA_CONFIG_FILE: archivo, INPUT_LOGS: 'si' }),
+    /EXECUTION_LOGS debe/,
+  );
   for (const texto of ['BROWSER=all\nBROWSER=chromium', 'HEADLES=true', 'BROWSER:all']) {
     await fs.writeFile(archivo, texto);
     assert.throws(() => cargarConfiguracion({}, archivo), /Properties/);
   }
-  return 34;
+  return 40;
 }
 async function comprobar() {
   const temporal = await fs.mkdtemp(path.resolve('work-selfcheck-'));

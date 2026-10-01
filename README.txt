@@ -221,10 +221,13 @@ procesos terminados se registran como FAILED/INFRAESTRUCTURA.
 7. PIPELINE GITHUB ACTIONS
 
 Push/PR a main: utiliza los valores versionados de automation.properties.
-Ejecucion manual: browser, execution_mode, headless, logs, screenshots, trace,
-workers, tags, tap y dry_run. El valor properties conserva el archivo.
-Las entradas manuales sustituyen los flags de esa corrida. Para limpiar un filtro
-del archivo escribe none en tags o tap al iniciar el pipeline manualmente.
+Run workflow muestra un unico selector Navegador: chromium, firefox o webkit.
+El navegador seleccionado sustituye BROWSER solo para esa corrida manual.
+El resto de ajustes utiliza automation.properties: HEADLESS, EXECUTION_LOGS,
+SCREENSHOT_EACH_STEP, TRACE_ON_FAILURE, CUCUMBER_PARALLEL, EXECUTION_MODE,
+TAGS, TAP y DRY_RUN. Deja TAGS y TAP vacios para ejecutar todos los casos.
+Ejemplo: TAGS=@happyPath ejecuta solo los escenarios con ese tag.
+Para pruebas automaticas con los tres motores, utiliza BROWSER=all en el archivo.
 
 Preparar instala npm ci y utiliza el MISMO cargador de properties que el runner.
 Genera matriz y una copia de los flags efectivos para todos los jobs.
